@@ -3,7 +3,7 @@ name = "zakura-rocksdb"
 description = "Rust wrapper for Facebook's RocksDB embeddable database (zakura fork of rocksdb with a unity-build C++ compile)"
 version = "0.24.0"
 edition = "2021"
-rust-version = "1.85.0"
+rust-version = "1.97"
 authors = [
     "Tyler Neely <t@jujit.su>",
     "David Greenberg <dsg123456789@gmail.com>",

@@ -64,6 +64,16 @@
 
 #![warn(clippy::pedantic)]
 #![allow(
+    // Lints newer than upstream's Rust 1.85 baseline that fire only in unchanged
+    // upstream code. Allowed rather than fixed so the fork's diff from upstream
+    // stays small; drop them when the fork moves to an upstream release that
+    // fixes them.
+    mismatched_lifetime_syntaxes,
+    unused_attributes,
+    clippy::borrow_as_ptr,
+    clippy::cast_slice_from_raw_parts,
+    clippy::needless_for_each,
+    clippy::strlen_on_c_strings,
     // Next `cast_*` lints don't give alternatives.
     clippy::cast_possible_wrap, clippy::cast_possible_truncation, clippy::cast_sign_loss,
     // Next lints produce too much noise/false positives.
