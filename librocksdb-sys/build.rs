@@ -309,10 +309,19 @@ fn build_rocksdb() {
             config.file(format!("rocksdb/{file}"));
         }
     } else {
+        // The Windows port sources include <windows.h>, whose macros (such as
+        // `CreateFile` -> `CreateFileA`) would rename RocksDB declarations that
+        // other group members include, so they get their own translation units.
+        let (standalone, grouped): (Vec<&str>, Vec<&str>) = lib_sources
+            .iter()
+            .partition(|file| file.starts_with("port/win/"));
+        for file in standalone {
+            config.file(format!("rocksdb/{file}"));
+        }
         let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         let unity_dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("unity");
         std::fs::create_dir_all(&unity_dir).expect("unable to create unity directory");
-        for (i, group) in lib_sources.chunks(chunk).enumerate() {
+        for (i, group) in grouped.chunks(chunk).enumerate() {
             let mut unit = String::new();
             for file in group {
                 let path = manifest_dir.join("rocksdb").join(file);
