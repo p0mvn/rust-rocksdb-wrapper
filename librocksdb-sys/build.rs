@@ -291,8 +291,39 @@ fn build_rocksdb() {
         // link libatomic required to build for riscv64gc
         println!("cargo:rustc-link-lib=atomic");
     }
-    for file in lib_sources {
-        config.file(format!("rocksdb/{file}"));
+    // Unity build: compile the sources in fixed-size groups, each group one
+    // translation unit that `#include`s its members. RocksDB's headers are
+    // parsed and their inline/template code emitted once per group instead
+    // of once per file, which roughly halves compile time. Upstream supports
+    // a whole-library unity build (`make unity.a`); groups keep the work
+    // parallel. The group size is fixed so the output does not depend on the
+    // machine. `ROCKSDB_UNITY_CHUNK=1` restores one translation unit per file.
+    println!("cargo:rerun-if-env-changed=ROCKSDB_UNITY_CHUNK");
+    let chunk = env::var("ROCKSDB_UNITY_CHUNK")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(16);
+    if chunk == 1 {
+        for file in lib_sources {
+            config.file(format!("rocksdb/{file}"));
+        }
+    } else {
+        let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+        let unity_dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("unity");
+        std::fs::create_dir_all(&unity_dir).expect("unable to create unity directory");
+        for (i, group) in lib_sources.chunks(chunk).enumerate() {
+            let mut unit = String::new();
+            for file in group {
+                let path = manifest_dir.join("rocksdb").join(file);
+                unit.push_str(&format!("#include \"{}\"\n", path.display()));
+            }
+            let unit_path = unity_dir.join(format!("unity_{i:03}.cc"));
+            if std::fs::read_to_string(&unit_path).ok().as_deref() != Some(unit.as_str()) {
+                std::fs::write(&unit_path, unit).expect("unable to write unity source");
+            }
+            config.file(unit_path);
+        }
     }
 
     config.file("build_version.cc");

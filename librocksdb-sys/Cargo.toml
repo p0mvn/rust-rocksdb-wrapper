@@ -1,5 +1,5 @@
 [package]
-name = "librocksdb-sys"
+name = "zakura-librocksdb-sys"
 version = "0.17.3+10.4.2"
 edition = "2021"
 rust-version = "1.85.0"
@@ -8,12 +8,19 @@ authors = [
     "Arkadiy Paronyan <arkadiy@ethcore.io>",
 ]
 license = "MIT/Apache-2.0/BSD-3-Clause"
-description = "Native bindings to librocksdb"
+description = "Native bindings to librocksdb (zakura fork of librocksdb-sys with a unity-build C++ compile)"
 readme = "README.md"
-repository = "https://github.com/rust-rocksdb/rust-rocksdb"
+repository = "https://github.com/zakura-core/rust-rocksdb-wrapper"
 keywords = ["bindings", "ffi", "rocksdb"]
 categories = ["api-bindings", "database", "external-ffi-bindings"]
 links = "rocksdb"
+# RocksDB's website sources (11 MB of pages and images) are not needed to
+# build and would push the package past the crates.io size limit.
+exclude = ["rocksdb/docs/"]
+
+[lib]
+# Keep the upstream crate name so `rocksdb` and downstream code are unchanged.
+name = "librocksdb_sys"
 
 [features]
 default = ["static", "bindgen/runtime"]

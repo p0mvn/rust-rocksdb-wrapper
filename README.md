@@ -1,5 +1,19 @@
 # rust-rocksdb
 
+> **Zakura fork.** This repository publishes `zakura-rocksdb` and
+> `zakura-librocksdb-sys`, forks of [`rocksdb`](https://crates.io/crates/rocksdb)
+> and [`librocksdb-sys`](https://crates.io/crates/librocksdb-sys) used by
+> [Zakura](https://github.com/zakura-core/zakura). The only functional change
+> is in `librocksdb-sys/build.rs`: RocksDB's C++ sources are compiled as a
+> unity build, 16 sources per translation unit, so shared headers are parsed
+> once per group instead of once per file. That cuts the bundled RocksDB
+> compile by more than half. Set `ROCKSDB_UNITY_CHUNK=1` to compile one file
+> at a time as upstream does.
+>
+> The library names stay `rocksdb` and `librocksdb_sys`, so depending on it as
+> `rocksdb = { package = "zakura-rocksdb", ... }` needs no code changes.
+> Upstream: <https://github.com/rust-rocksdb/rust-rocksdb>.
+
 [![RocksDB build](https://github.com/rust-rocksdb/rust-rocksdb/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/rust-rocksdb/rust-rocksdb/actions/workflows/rust.yml)
 [![crates.io](https://img.shields.io/crates/v/rocksdb.svg)](https://crates.io/crates/rocksdb)
 [![documentation](https://img.shields.io/docsrs/rocksdb/latest)](https://docs.rs/rocksdb)

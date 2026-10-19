@@ -1,6 +1,6 @@
 [package]
-name = "rocksdb"
-description = "Rust wrapper for Facebook's RocksDB embeddable database"
+name = "zakura-rocksdb"
+description = "Rust wrapper for Facebook's RocksDB embeddable database (zakura fork of rocksdb with a unity-build C++ compile)"
 version = "0.24.0"
 edition = "2021"
 rust-version = "1.85.0"
@@ -8,12 +8,16 @@ authors = [
     "Tyler Neely <t@jujit.su>",
     "David Greenberg <dsg123456789@gmail.com>",
 ]
-repository = "https://github.com/rust-rocksdb/rust-rocksdb"
+repository = "https://github.com/zakura-core/rust-rocksdb-wrapper"
 license = "Apache-2.0"
 categories = ["database"]
 keywords = ["database", "embedded", "LSM-tree", "persistence"]
 homepage = "https://github.com/rust-rocksdb/rust-rocksdb"
 exclude = [".gitignore", ".travis.yml", "deploy.sh", "test/**/*"]
+
+[lib]
+# Keep the upstream crate name so downstream `use rocksdb::...` is unchanged.
+name = "rocksdb"
 
 [workspace]
 members = ["librocksdb-sys"]
@@ -38,7 +42,7 @@ lto = ["librocksdb-sys/lto"]
 
 [dependencies]
 libc = "0.2"
-librocksdb-sys = { path = "librocksdb-sys", version = "0.17.3", default-features = false, features = [
+librocksdb-sys = { package = "zakura-librocksdb-sys", path = "librocksdb-sys", version = "=0.17.3", default-features = false, features = [
     "static",
 ] }
 serde = { version = "1", features = ["derive"], optional = true }
