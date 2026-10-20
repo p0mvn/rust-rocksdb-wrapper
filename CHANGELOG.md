@@ -1,5 +1,19 @@
 # Changelog
 
+## zakura-rocksdb 0.24.2 / zakura-librocksdb-sys 0.17.5+10.4.2 (unreleased)
+
+- Add a `full` feature, on by default. Without it, build only the RocksDB
+  Zakura uses: skip 89 sources and patch out SST ingestion, column family
+  import, remote compaction, tracing, encrypted file systems, the plain and
+  cuckoo table formats, and TTL databases. See the README's "Full RocksDB
+  build" section.
+
+## zakura-rocksdb 0.24.1 / zakura-librocksdb-sys 0.17.4+10.4.2 (2026-10-19)
+
+- Fix the Windows build: compile the Windows port sources outside unity
+  groups, where `<windows.h>`'s `CreateFile` macro renamed
+  `rocksdb::CreateFile` and broke `port/win/env_win.cc`.
+
 ## 0.24.0 (2025-08-10)
 
 ### Features
