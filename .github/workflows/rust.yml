@@ -139,6 +139,8 @@ jobs:
         run: |
           cargo nextest run --all
           cargo nextest run --all --features multi-threaded-cf
+      - name: Build without the `full` feature, as Zakura does
+        run: cargo build -p zakura-rocksdb --no-default-features --features lz4,bindgen-runtime
       - name: Mark working directory as writable
         if: runner.os == 'Linux'
         run: chmod -R a+w .

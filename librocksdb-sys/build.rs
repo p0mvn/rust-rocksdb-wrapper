@@ -314,12 +314,19 @@ fn build_rocksdb() {
     // a whole-library unity build (`make unity.a`); groups keep the work
     // parallel. The group size is fixed so the output does not depend on the
     // machine. `ROCKSDB_UNITY_CHUNK=1` restores one translation unit per file.
+    //
+    // Windows defaults to one translation unit per file. RocksDB `#undef`s
+    // <windows.h> macros that clash with its method names (`GetFreeSpace`,
+    // `DeleteFile`, ...) in particular headers, which works only in the
+    // include order of a single file; a group of files can reach a clashing
+    // call before the `#undef`.
     println!("cargo:rerun-if-env-changed=ROCKSDB_UNITY_CHUNK");
+    let default_chunk = if target.contains("windows") { 1 } else { 16 };
     let chunk = env::var("ROCKSDB_UNITY_CHUNK")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .filter(|&n| n > 0)
-        .unwrap_or(16);
+        .unwrap_or(default_chunk);
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let edited = if cfg!(feature = "full") {
