@@ -1,6 +1,6 @@
 [package]
 name = "zakura-librocksdb-sys"
-version = "0.17.3+10.4.2"
+version = "0.17.4+10.4.2"
 edition = "2021"
 rust-version = "1.97"
 authors = [
