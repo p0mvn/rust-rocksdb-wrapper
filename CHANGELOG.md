@@ -7,6 +7,10 @@
   `file/sst_file_manager_impl.cc`'s `GetFreeSpace` call where `<windows.h>`'s
   `GetFreeSpace` macro was still defined. `ROCKSDB_UNITY_CHUNK` still
   overrides the default.
+- Write the RocksDB source edits in `librocksdb-sys/zakura_minimal.rs` as
+  multi-line C++ snippets, as they appear in RocksDB, instead of escaped
+  one-line strings. The edited sources are byte-for-byte unchanged. Line
+  endings are normalized before matching, so a CRLF checkout also builds.
 
 ## zakura-rocksdb 0.24.1 / zakura-librocksdb-sys 0.17.4+10.4.2 (2026-10-20)
 
