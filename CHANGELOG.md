@@ -1,6 +1,14 @@
 # Changelog
 
-## zakura-rocksdb 0.24.1 / zakura-librocksdb-sys 0.17.4+10.4.2 (unreleased)
+## zakura-rocksdb 0.24.2 / zakura-librocksdb-sys 0.17.5+10.4.2 (unreleased)
+
+- Fix the Windows build without `full`: Windows now compiles one translation
+  unit per source by default. With the smaller source list, a unity group put
+  `file/sst_file_manager_impl.cc`'s `GetFreeSpace` call where `<windows.h>`'s
+  `GetFreeSpace` macro was still defined. `ROCKSDB_UNITY_CHUNK` still
+  overrides the default.
+
+## zakura-rocksdb 0.24.1 / zakura-librocksdb-sys 0.17.4+10.4.2 (2026-10-20)
 
 - Add a `full` feature, on by default. Without it, build only the RocksDB
   Zakura uses: skip 89 sources and patch out SST ingestion, column family
