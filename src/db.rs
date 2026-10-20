@@ -352,6 +352,8 @@ unsafe impl<T: ThreadMode + Send, I: DBInner> Send for DBCommon<T, I> {}
 unsafe impl<T: ThreadMode, I: DBInner> Sync for DBCommon<T, I> {}
 
 // Specifies whether open DB for read only.
+// Without `full`, opening a TTL database fails before reading `ttl`.
+#[cfg_attr(not(feature = "full"), allow(dead_code))]
 enum AccessType<'a> {
     ReadWrite,
     ReadOnly { error_if_log_file_exist: bool },
@@ -739,11 +741,14 @@ impl<T: ThreadMode> DBWithThreadMode<T> {
                         to_cpath(secondary_path)?.as_ptr(),
                     ))
                 }
+                #[cfg(feature = "full")]
                 AccessType::WithTTL { ttl } => ffi_try!(ffi::rocksdb_open_with_ttl(
                     opts.inner,
                     cpath.as_ptr(),
                     ttl.as_secs() as c_int,
                 )),
+                #[cfg(not(feature = "full"))]
+                AccessType::WithTTL { .. } => return Err(ttl_not_built_in()),
             }
         };
         Ok(db)
@@ -791,6 +796,9 @@ impl<T: ThreadMode> DBWithThreadMode<T> {
                         cfhandles.as_mut_ptr(),
                     ))
                 }
+                #[cfg(not(feature = "full"))]
+                AccessType::WithTTL { .. } => return Err(ttl_not_built_in()),
+                #[cfg(feature = "full")]
                 AccessType::WithTTL { ttl } => {
                     let ttls: Vec<_> = cfs_v
                         .iter()
@@ -2677,6 +2685,13 @@ pub struct LiveFile {
     pub num_entries: u64,
     /// Number of deletions/tomb key(s) in the file
     pub num_deletions: u64,
+}
+
+/// The error for opening a TTL database when RocksDB's TTL support, which the
+/// `full` feature builds, is not compiled in.
+#[cfg(not(feature = "full"))]
+fn ttl_not_built_in() -> Error {
+    Error::new("TTL databases require the `full` feature".to_owned())
 }
 
 fn convert_options(opts: &[(&str, &str)]) -> Result<Vec<(CString, CString)>, Error> {

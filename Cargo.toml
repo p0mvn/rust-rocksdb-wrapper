@@ -23,7 +23,8 @@ name = "rocksdb"
 members = ["librocksdb-sys"]
 
 [features]
-default = ["snappy", "lz4", "zstd", "zlib", "bzip2", "bindgen-runtime"]
+default = ["snappy", "lz4", "zstd", "zlib", "bzip2", "bindgen-runtime", "full"]
+full = ["librocksdb-sys/full"]
 jemalloc = ["librocksdb-sys/jemalloc"]
 io-uring = ["librocksdb-sys/io-uring"]
 valgrind = []

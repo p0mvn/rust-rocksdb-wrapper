@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::{env, fs, path::PathBuf, process::Command};
 
+mod zakura_minimal;
+
 // On these platforms jemalloc-sys will use a prefixed jemalloc which cannot be linked together
 // with RocksDB.
 // See https://github.com/tikv/jemallocator/blob/tikv-jemalloc-sys-0.5.3/jemalloc-sys/src/env.rs#L25
@@ -113,6 +115,20 @@ fn build_rocksdb() {
         // We have a pre-generated a version of build_version.cc in the local directory
         .filter(|file| !matches!(*file, "util/build_version.cc"))
         .collect::<Vec<&'static str>>();
+
+    // Without the `full` feature, skip the sources listed in
+    // zakura_excluded_sources.txt: RocksDB features Zakura does not use, whose
+    // code the linker would otherwise keep or which only cost compile time.
+    // Their C API functions remain declared, so calling one without `full`
+    // fails to link.
+    if !cfg!(feature = "full") {
+        let excluded = include_str!("zakura_excluded_sources.txt")
+            .lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty() && !line.starts_with('#'))
+            .collect::<std::collections::HashSet<&str>>();
+        lib_sources.retain(|file| !excluded.contains(file));
+    }
 
     if let (true, Ok(target_feature_value)) = (
         target.contains("x86_64"),
@@ -304,9 +320,22 @@ fn build_rocksdb() {
         .and_then(|v| v.parse::<usize>().ok())
         .filter(|&n| n > 0)
         .unwrap_or(16);
+    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let edited = if cfg!(feature = "full") {
+        Default::default()
+    } else {
+        zakura_minimal::write_edited_sources(&manifest_dir.join("rocksdb"), &out_dir)
+    };
+    let source_path = |file: &str| {
+        edited
+            .get(file)
+            .cloned()
+            .unwrap_or_else(|| manifest_dir.join("rocksdb").join(file))
+    };
     if chunk == 1 {
         for file in lib_sources {
-            config.file(format!("rocksdb/{file}"));
+            config.file(source_path(file));
         }
     } else {
         // The Windows port sources include <windows.h>, whose macros (such as
@@ -316,15 +345,14 @@ fn build_rocksdb() {
             .iter()
             .partition(|file| file.starts_with("port/win/"));
         for file in standalone {
-            config.file(format!("rocksdb/{file}"));
+            config.file(source_path(file));
         }
-        let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-        let unity_dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("unity");
+        let unity_dir = out_dir.join("unity");
         std::fs::create_dir_all(&unity_dir).expect("unable to create unity directory");
         for (i, group) in grouped.chunks(chunk).enumerate() {
             let mut unit = String::new();
             for file in group {
-                let path = manifest_dir.join("rocksdb").join(file);
+                let path = source_path(file);
                 unit.push_str(&format!("#include \"{}\"\n", path.display()));
             }
             let unit_path = unity_dir.join(format!("unity_{i:03}.cc"));
