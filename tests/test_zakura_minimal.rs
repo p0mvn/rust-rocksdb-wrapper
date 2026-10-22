@@ -189,11 +189,13 @@ fn zakura_workload() {
 
 #[test]
 fn in_memory_database() {
+    // `DB::open` creates the directory on disk even with an in-memory `Env`.
+    let path = DBPath::new("_rust_rocksdb_zakura_minimal_in_memory");
     let env = Env::mem_env().unwrap();
     let mut opts = Options::default();
     opts.create_if_missing(true);
     opts.set_env(&env);
-    let db = DB::open(&opts, "/in-memory").unwrap();
+    let db = DB::open(&opts, &path).unwrap();
     db.put(b"key", b"value").unwrap();
     db.flush().unwrap();
     assert_eq!(db.get(b"key").unwrap().as_deref(), Some(&b"value"[..]));

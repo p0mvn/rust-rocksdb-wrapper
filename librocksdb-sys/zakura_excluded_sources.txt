@@ -32,7 +32,6 @@ test_util/transaction_test_util.cc
 tools/dump/db_dump_tool.cc
 util/async_file_reader.cc
 util/auto_skip_compressor.cc
-util/crc32c_arm64.cc
 util/simple_mixed_compressor.cc
 utilities/agg_merge/agg_merge.cc
 utilities/backup/backup_engine.cc

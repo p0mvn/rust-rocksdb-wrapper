@@ -18,6 +18,14 @@
   sources again, because other code needs their definitions; they add no
   measurable code to a binary that doesn't use them. Skip
   `table/sst_file_dumper.cc`, which only the `sst_dump` and `ldb` tools use.
+- Fix linking without `full` on ARM64 macOS: stop skipping
+  `util/crc32c_arm64.cc`, which `util/crc32c.cc` calls when `HAVE_ARM64_CRC`
+  is defined.
+- Fix compiling `util/crc32c.cc` when the C++ compiler enables AVX by default,
+  as the GCC 15 on GitHub's current Ubuntu runner does. `port/lang.h` then
+  defines `__PCLMUL__` without PCLMUL being enabled. Define `NO_PCLMUL`
+  unless the Rust target enables `pclmulqdq`, the same condition that
+  passes `-mpclmul`.
 - Add the "Minimal build toolchains" workflow. It links and runs
   `tests/test_zakura_minimal.rs` without `full` with GCC 12 to 16, distribution
   and rolling-release GCC and clang, on x86_64 and aarch64 Linux, macOS, and
