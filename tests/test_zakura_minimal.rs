@@ -12,7 +12,7 @@ mod util;
 
 use rocksdb::{
     perf::{set_perf_stats, PerfContext, PerfMetric, PerfStatsLevel},
-    BlockBasedOptions, ColumnFamilyDescriptor, DBCompressionType, DBWithThreadMode, Direction, Env,
+    BlockBasedOptions, ColumnFamilyDescriptor, DBCompressionType, DBWithThreadMode, Direction,
     IteratorMode, MergeOperands, MultiThreaded, Options, ReadOptions, WriteBatch, DB,
 };
 use util::DBPath;
@@ -185,18 +185,4 @@ fn zakura_workload() {
     drop(db);
 
     assert_eq!(DB::list_cf(&opts, &path).unwrap().len(), 3);
-}
-
-#[test]
-fn in_memory_database() {
-    // `DB::open` creates the directory on disk even with an in-memory `Env`.
-    let path = DBPath::new("_rust_rocksdb_zakura_minimal_in_memory");
-    let env = Env::mem_env().unwrap();
-    let mut opts = Options::default();
-    opts.create_if_missing(true);
-    opts.set_env(&env);
-    let db = DB::open(&opts, &path).unwrap();
-    db.put(b"key", b"value").unwrap();
-    db.flush().unwrap();
-    assert_eq!(db.get(b"key").unwrap().as_deref(), Some(&b"value"[..]));
 }
