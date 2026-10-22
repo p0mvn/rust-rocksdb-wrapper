@@ -1,6 +1,39 @@
 # Changelog
 
-## zakura-rocksdb 0.24.2 / zakura-librocksdb-sys 0.17.5+10.4.2 (unreleased)
+## zakura-rocksdb 0.24.3 / zakura-librocksdb-sys 0.17.6+10.4.2 (unreleased)
+
+- Fix linking without `full` on GCC 16. `utilities/transactions/snapshot_checker.cc`
+  is compiled for `DisableGCSnapshotChecker`, but its
+  `WritePreparedSnapshotChecker::CheckInSnapshot` called the skipped
+  `WritePreparedTxnDB::GetCommitEntry`. GCC 16 speculatively devirtualizes the
+  `CheckInSnapshot` calls that compaction makes, which kept that reference
+  live, and the link failed. The checker, which nothing can create without
+  `full`, now aborts instead.
+- Remove the other references to skipped code from code outside the C API,
+  where a compiler could keep them live the same way: the plain table
+  factory's reader and builder, and the secondary instance's remote
+  compaction. Compile `cache/clock_cache.cc`,
+  `cache/compressed_secondary_cache.cc`, `cache/tiered_secondary_cache.cc`,
+  `util/stderr_logger.cc`, and the plain table bloom, index, and key coding
+  sources again, because other code needs their definitions; they add no
+  measurable code to a binary that doesn't use them. Skip
+  `table/sst_file_dumper.cc`, which only the `sst_dump` and `ldb` tools use.
+- Fix linking without `full` on ARM64 macOS: stop skipping
+  `util/crc32c_arm64.cc`, which `util/crc32c.cc` calls when `HAVE_ARM64_CRC`
+  is defined.
+- Fix compiling `util/crc32c.cc` when the C++ compiler enables AVX by default,
+  as the GCC 15 on GitHub's current Ubuntu runner does. `port/lang.h` then
+  defines `__PCLMUL__` without PCLMUL being enabled. Define `NO_PCLMUL`
+  unless the Rust target enables `pclmulqdq`, the same condition that
+  passes `-mpclmul`.
+- Add the "Minimal build toolchains" workflow. It links and runs
+  `tests/test_zakura_minimal.rs` without `full` with GCC 12 to 16, distribution
+  and rolling-release GCC and clang, on x86_64 and aarch64 Linux and macOS,
+  builds it on Windows, and checks that only C API functions reference
+  skipped code. Linking a binary without `full` needs GCC or clang: MSVC's
+  linker fails on the C API of the skipped features, as it always has.
+
+## zakura-rocksdb 0.24.2 / zakura-librocksdb-sys 0.17.5+10.4.2 (2026-10-20)
 
 - Fix the Windows build without `full`: Windows now compiles one translation
   unit per source by default. With the smaller source list, a unity group put

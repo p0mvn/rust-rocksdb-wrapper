@@ -71,9 +71,27 @@ compile and about 540 KB less code in the final binary. Without `full`:
   and TTL databases.
 - Calling the C API of transactions, backups, checkpoints, or BlobDB fails to
   link.
+- Linking a binary needs GCC or clang. MSVC's linker resolves every symbol of
+  the C API's object file before dropping unused functions, so it fails on
+  the C API of the skipped features.
 
 `librocksdb-sys/zakura_minimal.rs` makes the source edits, and
 `librocksdb-sys/zakura_excluded_sources.txt` lists the skipped sources.
+
+Only the C API may reference skipped code. The linker keeps a C API function
+only when Rust calls it, but the compiler can keep any other function live,
+for example by speculatively devirtualizing a virtual call, and then the link
+fails on some toolchains and not others. The "Minimal build toolchains"
+workflow links and runs `tests/test_zakura_minimal.rs` with many GCC and
+clang versions and on several machines (on Windows it only builds the
+library), and on Linux
+`.github/scripts/check_minimal_symbols.py` fails if anything other than the
+C API references skipped code:
+
+```text
+cargo test --release --no-default-features --features lz4,bindgen-runtime --test test_zakura_minimal
+python3 .github/scripts/check_minimal_symbols.py target/release/build/zakura-librocksdb-sys-*/out/librocksdb.a
+```
 
 ## Multithreaded ColumnFamily alternation
 

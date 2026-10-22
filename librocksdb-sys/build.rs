@@ -161,6 +161,11 @@ fn build_rocksdb() {
         }
         if !target.contains("android") && target_features.contains(&"pclmulqdq") {
             config.flag_if_supported("-mpclmul");
+        } else {
+            // RocksDB's port/lang.h defines `__PCLMUL__` whenever `__AVX__` is
+            // defined. A compiler that enables AVX by default then compiles
+            // crc32c.cc's PCLMUL code without PCLMUL enabled, and fails.
+            config.define("NO_PCLMUL", None);
         }
     }
 
