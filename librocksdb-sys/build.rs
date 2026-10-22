@@ -295,11 +295,6 @@ fn build_rocksdb() {
         }
         config.flag("-EHsc");
         config.flag("-std:c++17");
-        // Put each function in its own COMDAT, as `cc` does with
-        // `-ffunction-sections` elsewhere, so the linker can drop unused
-        // functions. Without `full`, the C API functions of skipped features
-        // reference code that isn't compiled and would otherwise fail the link.
-        config.flag("-Gy");
     } else {
         config.flag(cxx_standard());
         // matches the flags in CMakeLists.txt from rocksdb

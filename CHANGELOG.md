@@ -26,13 +26,12 @@
   defines `__PCLMUL__` without PCLMUL being enabled. Define `NO_PCLMUL`
   unless the Rust target enables `pclmulqdq`, the same condition that
   passes `-mpclmul`.
-- Fix linking without `full` with MSVC: compile with `-Gy`, so the linker
-  can drop the unused C API functions of skipped features, as it already does
-  with GCC and clang.
 - Add the "Minimal build toolchains" workflow. It links and runs
   `tests/test_zakura_minimal.rs` without `full` with GCC 12 to 16, distribution
-  and rolling-release GCC and clang, on x86_64 and aarch64 Linux, macOS, and
-  Windows, and checks that only C API functions reference skipped code.
+  and rolling-release GCC and clang, on x86_64 and aarch64 Linux and macOS,
+  builds it on Windows, and checks that only C API functions reference
+  skipped code. Linking a binary without `full` needs GCC or clang: MSVC's
+  linker fails on the C API of the skipped features, as it always has.
 
 ## zakura-rocksdb 0.24.2 / zakura-librocksdb-sys 0.17.5+10.4.2 (2026-10-20)
 

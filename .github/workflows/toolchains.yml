@@ -4,8 +4,9 @@ name: Minimal build toolchains
 # several machines. Without `full`, the archive references code it skips, and
 # whether a compiler keeps such a reference live decides whether the link
 # succeeds: GCC 16 broke Zakura's release build while GCC 14 linked it. Each
-# job links and runs `tests/test_zakura_minimal.rs` in release and debug, and
-# on Linux checks that only C API functions reference skipped code.
+# job links and runs `tests/test_zakura_minimal.rs` in release and debug
+# (Windows only builds the library), and on Linux checks that only C API
+# functions reference skipped code.
 #
 # The weekly run picks up new compilers in the rolling images.
 
@@ -137,12 +138,22 @@ jobs:
       - name: Install LLVM (Windows)
         if: runner.os == 'Windows'
         run: choco install llvm -y
+      # MSVC's linker resolves every symbol of each object it pulls in
+      # before dropping unused functions, so the C API functions of skipped
+      # features fail the link. Zakura only checks Windows builds, so this job
+      # builds the library without linking a binary.
+      - name: Build, Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: cargo build --release $MINIMAL_FEATURES
       - name: Link and run, release
+        if: runner.os != 'Windows'
         shell: bash
         run: cargo test --release $MINIMAL_FEATURES --test test_zakura_minimal
       - name: Check references to skipped code
         if: runner.os == 'Linux'
         run: python3 .github/scripts/check_minimal_symbols.py target/release/build/zakura-librocksdb-sys-*/out/librocksdb.a
       - name: Link and run, debug
+        if: runner.os != 'Windows'
         shell: bash
         run: cargo test $MINIMAL_FEATURES --test test_zakura_minimal
