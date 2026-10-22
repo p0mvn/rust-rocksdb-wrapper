@@ -25,7 +25,9 @@
 
 ## Requirements
 
-- Clang and LLVM
+- A C++ compiler (GCC, clang, or MSVC). Building does not need libclang:
+  the Rust bindings to RocksDB's C API are committed in
+  `librocksdb-sys/src/bindings.rs`.
 
 ## Contributing
 
@@ -88,7 +90,7 @@ The "Minimal build toolchains" workflow links and runs
 versions, on Linux, macOS, and Windows, and runs the check on Linux:
 
 ```text
-cargo test --release --no-default-features --features lz4,bindgen-runtime --test test_zakura_minimal
+cargo test --release --no-default-features --features lz4 --test test_zakura_minimal
 python3 .github/scripts/check_minimal_symbols.py target/*/build/zakura-librocksdb-sys-*/out/librocksdb.a
 python3 .github/scripts/update_excluded_sources.py
 ```
@@ -109,22 +111,27 @@ flag, which results in library using the static version of the run-time library.
 *This can be useful in case there's a conflict in the dependency tree between different
 run-time versions.*
 
-## Switch between static and dynamic linking for bindgen (features `bindgen-static` and `bindgen-runtime`)
+## Bindings
 
-The feature `bindgen-runtime` will enable the `runtime` feature of bindgen, which dynamically
-links to libclang. This is suitable for most platforms, and is enabled by default.
+`librocksdb-sys/src/bindings.rs` holds the Rust declarations for RocksDB's C
+API (`rocksdb/include/rocksdb/c.h`), so builds do not run bindgen or need
+libclang. After updating the `rocksdb` submodule, regenerate them from the
+repository root with:
 
-The feature `bindgen-static` will enable the `static` feature of bindgen, which statically
-links to libclang. This is suitable for musllinux platforms, such as Alpine linux.
-To build on Alpine linux for example, make these changes to your Cargo.toml:
-
-```toml
-[dependencies.rocksdb]
-default-features = false
-features = ["bindgen-static", "snappy", "lz4", "zstd", "zlib", "bzip2"]
+```text
+cargo run --manifest-path tools/generate-bindings/Cargo.toml --locked
 ```
 
-Notice that `runtime` and `static` features are mutually exclusive, and won't compile if both are enabled.
+The generator needs libclang. CI fails if the committed file differs from its
+output. The bindings are generated for `x86_64-unknown-linux-gnu`; RocksDB's
+C API declarations are the same on every supported target, so one file covers
+them all.
+
+The `bindgen-runtime` and `bindgen-static` features no longer do anything, and
+are kept so existing dependents still build.
+
+If you link a system RocksDB instead of the bundled one, it must be the same
+version as the `rocksdb` submodule.
 
 ## LTO
 Enable the `lto` feature to enable link-time optimization. It will compile rocksdb with `-flto` flag. This feature is disabled by default.

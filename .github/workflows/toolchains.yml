@@ -19,7 +19,7 @@ on:
 env:
   RUST_VERSION: 1.97.1
   CARGO_TERM_COLOR: always
-  MINIMAL_FEATURES: --no-default-features --features lz4,bindgen-runtime
+  MINIMAL_FEATURES: --no-default-features --features lz4
 
 jobs:
   linux-containers:
@@ -59,20 +59,19 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            build-essential binutils ca-certificates clang curl git libclang-dev python3
+            build-essential binutils ca-certificates clang curl git python3
       - name: Install packages (Ubuntu clang)
         if: matrix.family == 'ubuntu-clang'
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
             build-essential binutils ca-certificates curl git python3 \
-            clang-${{ matrix.llvm }} libclang-${{ matrix.llvm }}-dev
+            clang-${{ matrix.llvm }}
           echo "CC=clang-${{ matrix.llvm }}" >> "$GITHUB_ENV"
           echo "CXX=clang++-${{ matrix.llvm }}" >> "$GITHUB_ENV"
-          echo "LIBCLANG_PATH=/usr/lib/llvm-${{ matrix.llvm }}/lib" >> "$GITHUB_ENV"
       - name: Install packages (Fedora)
         if: matrix.family == 'fedora'
-        run: dnf install -y binutils clang clang-devel curl gcc gcc-c++ git-core make python3
+        run: dnf install -y binutils clang curl gcc gcc-c++ git-core make python3
       - name: Install packages (Arch)
         if: matrix.family == 'arch'
         run: pacman -Syu --noconfirm --needed base-devel binutils clang curl git python
@@ -124,19 +123,13 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
       - name: Install packages (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev
+        run: sudo apt-get update && sudo apt-get install -y clang
       - name: Select the compiler
         if: matrix.cxx
         shell: bash
         run: |
           echo "CC=${{ matrix.cc }}" >> "$GITHUB_ENV"
           echo "CXX=${{ matrix.cxx }}" >> "$GITHUB_ENV"
-      - name: Remove msys64 # Workaround to resolve link error with C:\msys64\mingw64\bin\libclang.dll
-        if: runner.os == 'Windows'
-        run: Remove-Item -LiteralPath "C:\msys64\" -Force -Recurse
-      - name: Install LLVM (Windows)
-        if: runner.os == 'Windows'
-        run: choco install llvm -y
       - name: Link and run, release
         shell: bash
         run: cargo test --release $MINIMAL_FEATURES --test test_zakura_minimal
