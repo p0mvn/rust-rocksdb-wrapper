@@ -68,8 +68,7 @@ compile and about 540 KB less code in the final binary. Without `full`:
 - These features return `NotSupported` or fail to open: SST file ingestion,
   column family import, remote compaction (`CompactionService`), tracing and
   trace replay, encrypted file systems, the plain and cuckoo table formats,
-  compressed secondary caches, and TTL databases. `NewTieredCache` returns
-  null.
+  and TTL databases.
 - Calling the C API of transactions, backups, checkpoints, or BlobDB fails to
   link.
 

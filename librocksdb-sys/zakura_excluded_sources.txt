@@ -1,7 +1,5 @@
 # Sources skipped without the `full` feature: RocksDB features Zakura does not
 # use. See librocksdb-sys/zakura_minimal.rs for the matching source edits.
-cache/clock_cache.cc
-cache/compressed_secondary_cache.cc
 cache/secondary_cache.cc
 db/blob/blob_log_sequential_reader.cc
 db/compaction/compaction_service_job.cc

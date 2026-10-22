@@ -256,27 +256,6 @@ Status DBImpl::StartIOTrace(const TraceOptions& trace_options,
   return Status::NotSupported("remote compaction is not built in");
 "#,
     },
-    // Compressed secondary caches and tiered caches.
-    Edit::Replace {
-        file: "cache/cache.cc",
-        find: r#"
-      sec_cache = NewCompressedSecondaryCache(sec_cache_opts);
-"#,
-        with: r#"
-      status = Status::NotSupported(
-          "compressed secondary caches are not built in");
-"#,
-    },
-    Edit::InsertAfter {
-        file: "cache/secondary_cache_adapter.cc",
-        after: r#"
-std::shared_ptr<Cache> NewTieredCache(const TieredCacheOptions& _opts) {
-"#,
-        insert: r#"
-  (void)_opts;
-  return nullptr;
-"#,
-    },
 ];
 
 /// The C++ in a raw string, without the newline after its opening quote.

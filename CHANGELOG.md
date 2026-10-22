@@ -10,13 +10,14 @@
   live, and the link failed. The checker, which nothing can create without
   `full`, now aborts instead.
 - Remove the other references to skipped code from code outside the C API,
-  where a compiler could keep them live the same way: the plain table factory's
-  reader and builder, the secondary instance's remote compaction, compressed
-  secondary caches, and `NewTieredCache`. Stop skipping
-  `cache/tiered_secondary_cache.cc`, `util/stderr_logger.cc`, and the plain
-  table bloom, index, and key coding sources, whose definitions such code
-  needs. Skip `table/sst_file_dumper.cc`, which only the `sst_dump` and `ldb`
-  tools use.
+  where a compiler could keep them live the same way: the plain table
+  factory's reader and builder, and the secondary instance's remote
+  compaction. Compile `cache/clock_cache.cc`,
+  `cache/compressed_secondary_cache.cc`, `cache/tiered_secondary_cache.cc`,
+  `util/stderr_logger.cc`, and the plain table bloom, index, and key coding
+  sources again, because other code needs their definitions; they add no
+  measurable code to a binary that doesn't use them. Skip
+  `table/sst_file_dumper.cc`, which only the `sst_dump` and `ldb` tools use.
 - Add the "Minimal build toolchains" workflow. It links and runs
   `tests/test_zakura_minimal.rs` without `full` with GCC 12 to 16, distribution
   and rolling-release GCC and clang, on x86_64 and aarch64 Linux, macOS, and
