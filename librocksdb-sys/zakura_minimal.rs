@@ -165,6 +165,118 @@ Status DBImpl::StartIOTrace(const TraceOptions& trace_options,
       return Status::NotSupported("plain tables are not built in");
 "#,
     },
+    // The edits above leave no way to create a `PlainTableFactory`, but its
+    // virtual methods are still compiled. These remove their calls into the
+    // skipped plain table sources.
+    Edit::Replace {
+        file: "table/plain/plain_table_factory.cc",
+        find: r#"
+  return PlainTableReader::Open(
+      table_reader_options.ioptions, table_reader_options.env_options,
+      table_reader_options.internal_comparator, std::move(file), file_size,
+      table, table_options_.bloom_bits_per_key, table_options_.hash_table_ratio,
+      table_options_.index_sparseness, table_options_.huge_page_tlb_size,
+      table_options_.full_scan_mode, table_reader_options.immortal,
+      table_reader_options.prefix_extractor.get());
+"#,
+        with: r#"
+  (void)table_reader_options;
+  (void)file;
+  (void)file_size;
+  (void)table;
+  return Status::NotSupported("plain tables are not built in");
+"#,
+    },
+    Edit::Replace {
+        file: "table/plain/plain_table_factory.cc",
+        find: r#"
+  return new PlainTableBuilder(
+      table_builder_options.ioptions, table_builder_options.moptions,
+      table_builder_options.internal_tbl_prop_coll_factories,
+      table_builder_options.column_family_id,
+      table_builder_options.level_at_creation, file,
+      table_options_.user_key_len, table_options_.encoding_type,
+      table_options_.index_sparseness, table_options_.bloom_bits_per_key,
+      table_builder_options.column_family_name, 6,
+      table_options_.huge_page_tlb_size, table_options_.hash_table_ratio,
+      table_options_.store_index_in_file, table_builder_options.db_id,
+      table_builder_options.db_session_id, table_builder_options.cur_file_num);
+"#,
+        with: r#"
+  (void)table_builder_options;
+  (void)file;
+  return nullptr;
+"#,
+    },
+    // Write-prepared and write-unprepared transactions. Nothing creates a
+    // `WritePreparedSnapshotChecker` without the skipped transaction sources,
+    // but this file is still compiled for `DisableGCSnapshotChecker`. The
+    // checker's call into `WritePreparedTxnDB` would otherwise leave a
+    // reference to the skipped code, which compilers may keep live: GCC 16
+    // speculatively devirtualizes the `CheckInSnapshot` calls in
+    // `DataIsDefinitelyInSnapshot` and `DataIsDefinitelyNotInSnapshot`, which
+    // compaction uses, and the link fails.
+    Edit::Replace {
+        file: "utilities/transactions/snapshot_checker.cc",
+        find: r#"
+  bool snapshot_released = false;
+  // TODO(myabandeh): set min_uncommitted
+  bool in_snapshot = txn_db_->IsInSnapshot(
+      sequence, snapshot_sequence, kMinUnCommittedSeq, &snapshot_released);
+  if (snapshot_released) {
+    return SnapshotCheckerResult::kSnapshotReleased;
+  }
+  return in_snapshot ? SnapshotCheckerResult::kInSnapshot
+                     : SnapshotCheckerResult::kNotInSnapshot;
+"#,
+        with: r#"
+  (void)sequence;
+  (void)snapshot_sequence;
+  std::abort();
+"#,
+    },
+    Edit::InsertAfter {
+        file: "utilities/transactions/snapshot_checker.cc",
+        after: r#"
+#include "db/snapshot_checker.h"
+"#,
+        insert: r#"
+#include <cstdlib>
+"#,
+    },
+    // Remote compaction: `DB::OpenAndCompact` returns early above, but the
+    // secondary instance's compaction still calls the skipped
+    // `CompactionServiceCompactionJob`.
+    Edit::InsertAfter {
+        file: "db/db_impl/db_impl_secondary.cc",
+        after: r#"
+    const CompactionServiceInput& input, CompactionServiceResult* result) {
+"#,
+        insert: r#"
+  return Status::NotSupported("remote compaction is not built in");
+"#,
+    },
+    // Compressed secondary caches and tiered caches.
+    Edit::Replace {
+        file: "cache/cache.cc",
+        find: r#"
+      sec_cache = NewCompressedSecondaryCache(sec_cache_opts);
+"#,
+        with: r#"
+      status = Status::NotSupported(
+          "compressed secondary caches are not built in");
+"#,
+    },
+    Edit::InsertAfter {
+        file: "cache/secondary_cache_adapter.cc",
+        after: r#"
+std::shared_ptr<Cache> NewTieredCache(const TieredCacheOptions& _opts) {
+"#,
+        insert: r#"
+  (void)_opts;
+  return nullptr;
+"#,
+    },
 ];
 
 /// The C++ in a raw string, without the newline after its opening quote.

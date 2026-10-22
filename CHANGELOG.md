@@ -1,6 +1,28 @@
 # Changelog
 
-## zakura-rocksdb 0.24.2 / zakura-librocksdb-sys 0.17.5+10.4.2 (unreleased)
+## zakura-rocksdb 0.24.3 / zakura-librocksdb-sys 0.17.6+10.4.2 (unreleased)
+
+- Fix linking without `full` on GCC 16. `utilities/transactions/snapshot_checker.cc`
+  is compiled for `DisableGCSnapshotChecker`, but its
+  `WritePreparedSnapshotChecker::CheckInSnapshot` called the skipped
+  `WritePreparedTxnDB::GetCommitEntry`. GCC 16 speculatively devirtualizes the
+  `CheckInSnapshot` calls that compaction makes, which kept that reference
+  live, and the link failed. The checker, which nothing can create without
+  `full`, now aborts instead.
+- Remove the other references to skipped code from code outside the C API,
+  where a compiler could keep them live the same way: the plain table factory's
+  reader and builder, the secondary instance's remote compaction, compressed
+  secondary caches, and `NewTieredCache`. Stop skipping
+  `cache/tiered_secondary_cache.cc`, `util/stderr_logger.cc`, and the plain
+  table bloom, index, and key coding sources, whose definitions such code
+  needs. Skip `table/sst_file_dumper.cc`, which only the `sst_dump` and `ldb`
+  tools use.
+- Add the "Minimal build toolchains" workflow. It links and runs
+  `tests/test_zakura_minimal.rs` without `full` with GCC 12 to 16, distribution
+  and rolling-release GCC and clang, on x86_64 and aarch64 Linux, macOS, and
+  Windows, and checks that only C API functions reference skipped code.
+
+## zakura-rocksdb 0.24.2 / zakura-librocksdb-sys 0.17.5+10.4.2 (2026-10-20)
 
 - Fix the Windows build without `full`: Windows now compiles one translation
   unit per source by default. With the smaller source list, a unity group put

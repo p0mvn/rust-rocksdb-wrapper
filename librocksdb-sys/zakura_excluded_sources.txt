@@ -3,7 +3,6 @@
 cache/clock_cache.cc
 cache/compressed_secondary_cache.cc
 cache/secondary_cache.cc
-cache/tiered_secondary_cache.cc
 db/blob/blob_log_sequential_reader.cc
 db/compaction/compaction_service_job.cc
 db/db_impl/db_impl_debug.cc
@@ -26,10 +25,8 @@ table/cuckoo/cuckoo_table_builder.cc
 table/cuckoo/cuckoo_table_factory.cc
 table/cuckoo/cuckoo_table_reader.cc
 table/external_table.cc
-table/plain/plain_table_bloom.cc
-table/plain/plain_table_index.cc
-table/plain/plain_table_key_coding.cc
 table/plain/plain_table_reader.cc
+table/sst_file_dumper.cc
 table/sst_file_reader.cc
 test_util/sync_point.cc
 test_util/sync_point_impl.cc
@@ -39,7 +36,6 @@ util/async_file_reader.cc
 util/auto_skip_compressor.cc
 util/crc32c_arm64.cc
 util/simple_mixed_compressor.cc
-util/stderr_logger.cc
 utilities/agg_merge/agg_merge.cc
 utilities/backup/backup_engine.cc
 utilities/blob_db/blob_compaction_filter.cc

@@ -1,0 +1,148 @@
+name: Minimal build toolchains
+
+# Builds RocksDB without `full`, as Zakura does, with many C++ compilers and on
+# several machines. Without `full`, the archive references code it skips, and
+# whether a compiler keeps such a reference live decides whether the link
+# succeeds: GCC 16 broke Zakura's release build while GCC 14 linked it. Each
+# job links and runs `tests/test_zakura_minimal.rs` in release and debug, and
+# on Linux checks that only C API functions reference skipped code.
+#
+# The weekly run picks up new compilers in the rolling images.
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+env:
+  RUST_VERSION: 1.97.1
+  CARGO_TERM_COLOR: always
+  MINIMAL_FEATURES: --no-default-features --features lz4,bindgen-runtime
+
+jobs:
+  linux-containers:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    # mirror.gcr.io serves Docker Hub's official images without its anonymous
+    # pull limits.
+    container: mirror.gcr.io/library/${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # GCC releases, from the official images (/usr/local/bin/gcc).
+          - { name: GCC 12, image: "gcc:12", family: debian, cc: gcc, cxx: g++ }
+          - { name: GCC 13, image: "gcc:13", family: debian, cc: gcc, cxx: g++ }
+          - { name: GCC 14, image: "gcc:14", family: debian, cc: gcc, cxx: g++ }
+          - { name: GCC 15, image: "gcc:15", family: debian, cc: gcc, cxx: g++ }
+          - { name: GCC 16, image: "gcc:16", family: debian, cc: gcc, cxx: g++ }
+          # Distribution compilers, built with their distribution's defaults.
+          # Debian 13 is the base of Zakura's Docker image.
+          - { name: Debian 13 GCC, image: "debian:trixie", family: debian, cc: gcc, cxx: g++ }
+          - { name: Debian 13 clang, image: "debian:trixie", family: debian, cc: clang, cxx: clang++ }
+          - { name: Debian testing GCC, image: "debian:testing", family: debian, cc: gcc, cxx: g++ }
+          - { name: Debian testing clang, image: "debian:testing", family: debian, cc: clang, cxx: clang++ }
+          - { name: Ubuntu 24.04 clang 18, image: "ubuntu:24.04", family: ubuntu-clang, llvm: 18 }
+          - { name: Ubuntu 24.04 clang 19, image: "ubuntu:24.04", family: ubuntu-clang, llvm: 19 }
+          - { name: Fedora GCC, image: "fedora:latest", family: fedora, cc: gcc, cxx: g++ }
+          - { name: Fedora clang, image: "fedora:latest", family: fedora, cc: clang, cxx: clang++ }
+          # Rolling releases, for the newest compilers.
+          - { name: Fedora Rawhide GCC, image: "fedora:rawhide", family: fedora, cc: gcc, cxx: g++ }
+          - { name: Fedora Rawhide clang, image: "fedora:rawhide", family: fedora, cc: clang, cxx: clang++ }
+          - { name: Arch GCC, image: "archlinux:latest", family: arch, cc: gcc, cxx: g++ }
+          - { name: Arch clang, image: "archlinux:latest", family: arch, cc: clang, cxx: clang++ }
+    steps:
+      - name: Install packages (Debian)
+        if: matrix.family == 'debian'
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential binutils ca-certificates clang curl git libclang-dev python3
+      - name: Install packages (Ubuntu clang)
+        if: matrix.family == 'ubuntu-clang'
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential binutils ca-certificates curl git python3 \
+            clang-${{ matrix.llvm }} libclang-${{ matrix.llvm }}-dev
+          echo "CC=clang-${{ matrix.llvm }}" >> "$GITHUB_ENV"
+          echo "CXX=clang++-${{ matrix.llvm }}" >> "$GITHUB_ENV"
+          echo "LIBCLANG_PATH=/usr/lib/llvm-${{ matrix.llvm }}/lib" >> "$GITHUB_ENV"
+      - name: Install packages (Fedora)
+        if: matrix.family == 'fedora'
+        run: dnf install -y binutils clang clang-devel curl gcc gcc-c++ git-core make python3
+      - name: Install packages (Arch)
+        if: matrix.family == 'arch'
+        run: pacman -Syu --noconfirm --needed base-devel binutils clang curl git python
+      - name: Select the compiler
+        if: matrix.cxx
+        run: |
+          echo "CC=${{ matrix.cc }}" >> "$GITHUB_ENV"
+          echo "CXX=${{ matrix.cxx }}" >> "$GITHUB_ENV"
+      - name: Show the compiler
+        run: |
+          "$CXX" --version
+          cc --version
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+            | sh -s -- -y --profile minimal --default-toolchain "$RUST_VERSION"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Link and run, release
+        run: cargo test --release $MINIMAL_FEATURES --test test_zakura_minimal
+      - name: Check references to skipped code
+        run: python3 .github/scripts/check_minimal_symbols.py target/release/build/zakura-librocksdb-sys-*/out/librocksdb.a
+      - name: Link and run, debug
+        run: cargo test $MINIMAL_FEATURES --test test_zakura_minimal
+
+  native:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Ubuntu x86_64 GCC, os: ubuntu-latest, cc: gcc, cxx: g++ }
+          - { name: Ubuntu aarch64 GCC, os: ubuntu-24.04-arm, cc: gcc, cxx: g++ }
+          - { name: Ubuntu aarch64 clang, os: ubuntu-24.04-arm, cc: clang, cxx: clang++ }
+          - { name: macOS aarch64 Apple clang, os: macos-latest }
+          - { name: Windows x86_64 MSVC, os: windows-latest }
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+      - name: Install packages (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y clang libclang-dev
+      - name: Select the compiler
+        if: matrix.cxx
+        shell: bash
+        run: |
+          echo "CC=${{ matrix.cc }}" >> "$GITHUB_ENV"
+          echo "CXX=${{ matrix.cxx }}" >> "$GITHUB_ENV"
+      - name: Remove msys64 # Workaround to resolve link error with C:\msys64\mingw64\bin\libclang.dll
+        if: runner.os == 'Windows'
+        run: Remove-Item -LiteralPath "C:\msys64\" -Force -Recurse
+      - name: Install LLVM (Windows)
+        if: runner.os == 'Windows'
+        run: choco install llvm -y
+      - name: Link and run, release
+        shell: bash
+        run: cargo test --release $MINIMAL_FEATURES --test test_zakura_minimal
+      - name: Check references to skipped code
+        if: runner.os == 'Linux'
+        run: python3 .github/scripts/check_minimal_symbols.py target/release/build/zakura-librocksdb-sys-*/out/librocksdb.a
+      - name: Link and run, debug
+        shell: bash
+        run: cargo test $MINIMAL_FEATURES --test test_zakura_minimal
