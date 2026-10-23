@@ -7,7 +7,6 @@ db/db_impl/db_impl_debug.cc
 db/db_impl/db_impl_follower.cc
 db/external_sst_file_ingestion_job.cc
 db/import_column_family_job.cc
-db/wide/wide_columns_helper.cc
 env/env_encryption.cc
 env/fs_on_demand.cc
 file/readahead_raf.cc
@@ -19,12 +18,8 @@ monitoring/thread_status_updater_debug.cc
 monitoring/thread_status_util_debug.cc
 port/stack_trace.cc
 table/adaptive/adaptive_table_factory.cc
-table/cuckoo/cuckoo_table_builder.cc
-table/cuckoo/cuckoo_table_factory.cc
-table/cuckoo/cuckoo_table_reader.cc
 table/external_table.cc
 table/plain/plain_table_reader.cc
-table/sst_file_dumper.cc
 table/sst_file_reader.cc
 test_util/sync_point.cc
 test_util/sync_point_impl.cc
@@ -34,7 +29,6 @@ util/async_file_reader.cc
 util/auto_skip_compressor.cc
 util/simple_mixed_compressor.cc
 utilities/agg_merge/agg_merge.cc
-utilities/backup/backup_engine.cc
 utilities/blob_db/blob_compaction_filter.cc
 utilities/blob_db/blob_db.cc
 utilities/blob_db/blob_db_impl.cc
@@ -45,7 +39,6 @@ utilities/cache_dump_load_impl.cc
 utilities/cassandra/cassandra_compaction_filter.cc
 utilities/cassandra/format.cc
 utilities/cassandra/merge_operator.cc
-utilities/checkpoint/checkpoint_impl.cc
 utilities/convenience/info_log_finder.cc
 utilities/debug.cc
 utilities/env_mirror.cc
@@ -53,9 +46,7 @@ utilities/fault_injection_env.cc
 utilities/fault_injection_fs.cc
 utilities/fault_injection_secondary_cache.cc
 utilities/leveldb_options/leveldb_options.cc
-utilities/memory/memory_util.cc
 utilities/option_change_migration/option_change_migration.cc
-utilities/options/options_util.cc
 utilities/persistent_cache/block_cache_tier.cc
 utilities/persistent_cache/block_cache_tier_file.cc
 utilities/persistent_cache/block_cache_tier_metadata.cc
@@ -66,19 +57,4 @@ utilities/secondary_index/simple_secondary_index.cc
 utilities/simulator_cache/cache_simulator.cc
 utilities/simulator_cache/sim_cache.cc
 utilities/trace/replayer_impl.cc
-utilities/transactions/lock/lock_manager.cc
-utilities/transactions/lock/point/point_lock_manager.cc
-utilities/transactions/lock/point/point_lock_tracker.cc
-utilities/transactions/optimistic_transaction.cc
-utilities/transactions/optimistic_transaction_db_impl.cc
-utilities/transactions/pessimistic_transaction.cc
-utilities/transactions/pessimistic_transaction_db.cc
-utilities/transactions/transaction_base.cc
-utilities/transactions/transaction_db_mutex_impl.cc
-utilities/transactions/transaction_util.cc
-utilities/transactions/write_prepared_txn.cc
-utilities/transactions/write_prepared_txn_db.cc
-utilities/transactions/write_unprepared_txn.cc
-utilities/transactions/write_unprepared_txn_db.cc
-utilities/ttl/db_ttl_impl.cc
 utilities/types_util.cc
