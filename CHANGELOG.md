@@ -1,6 +1,12 @@
 # Changelog
 
-## zakura-rocksdb 0.24.3 / zakura-librocksdb-sys 0.17.6+10.4.2 (unreleased)
+## Unreleased
+
+- Exclude `snappy/third_party/` (Google benchmark and googletest) from the
+  `zakura-librocksdb-sys` package. They are never compiled, but a recursive
+  submodule checkout packaged them into 0.17.6, adding 420 files.
+
+## zakura-rocksdb 0.24.3 / zakura-librocksdb-sys 0.17.6+10.4.2 (2026-10-22)
 
 - Fix linking without `full` on GCC 16. `utilities/transactions/snapshot_checker.cc`
   is compiled for `DisableGCSnapshotChecker`, but its

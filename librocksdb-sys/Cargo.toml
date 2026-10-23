@@ -15,8 +15,10 @@ keywords = ["bindings", "ffi", "rocksdb"]
 categories = ["api-bindings", "database", "external-ffi-bindings"]
 links = "rocksdb"
 # RocksDB's website sources (11 MB of pages and images) are not needed to
-# build and would push the package past the crates.io size limit.
-exclude = ["rocksdb/docs/"]
+# build and would push the package past the crates.io size limit. Snappy's
+# nested submodules (Google benchmark and googletest) are never compiled, but a
+# recursive submodule checkout would otherwise package them.
+exclude = ["rocksdb/docs/", "snappy/third_party/"]
 
 [lib]
 # Keep the upstream crate name so `rocksdb` and downstream code are unchanged.
