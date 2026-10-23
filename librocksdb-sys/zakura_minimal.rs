@@ -1,11 +1,11 @@
 //! Source edits that remove RocksDB features Zakura does not use.
 //!
 //! Without the `full` feature, each listed RocksDB source file is copied into
-//! `OUT_DIR`, edited, and compiled in place of the original. Every edit makes
-//! an entry point of an unused feature return early, so the compiler drops the
-//! call into that feature and the linker drops the feature's code. Where the
-//! rest of an entry point calls into a skipped source, `#if 0` removes it, since
-//! an unoptimized build still compiles code after an early return. The
+//! `OUT_DIR`, edited, and compiled in place of the original. Most edits replace
+//! the body of an unused feature's entry point with an early return, so
+//! nothing calls into that feature and the linker drops the feature's code.
+//! They replace the whole body, rather than insert a return, because an
+//! unoptimized MSVC build still compiles the code after a return. The
 //! `rocksdb` submodule itself stays unmodified.
 //!
 //! The C++ in each edit is written exactly as it appears in RocksDB. Each
@@ -18,6 +18,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 enum Edit {
+    /// Replaces the body of the function whose code, up to and including the
+    /// body's opening brace, ends with `signature`.
+    ReplaceBody {
+        file: &'static str,
+        signature: &'static str,
+        body: &'static str,
+    },
     /// Inserts `insert` right after the code `after`.
     InsertAfter {
         file: &'static str,
@@ -34,104 +41,87 @@ enum Edit {
 
 const EDITS: &[Edit] = &[
     // SST file ingestion (`DB::IngestExternalFile*`).
-    Edit::InsertAfter {
+    Edit::ReplaceBody {
         file: "db/db_impl/db_impl.cc",
-        after: r#"
+        signature: r#"
 Status DBImpl::IngestExternalFiles(
     const std::vector<IngestExternalFileArg>& args) {
 "#,
-        insert: r#"
+        body: r#"
   return Status::NotSupported("SST file ingestion is not built in");
-#if 0
-"#,
-    },
-    Edit::Replace {
-        file: "db/db_impl/db_impl.cc",
-        find: r#"
-  return status;
-}
-
-Status DBImpl::CreateColumnFamilyWithImport(
-"#,
-        with: r#"
-  return status;
-#endif
-}
-
-Status DBImpl::CreateColumnFamilyWithImport(
 "#,
     },
     // Column family import (`DB::CreateColumnFamilyWithImport`).
-    Edit::InsertAfter {
+    Edit::ReplaceBody {
         file: "db/db_impl/db_impl.cc",
-        after: r#"
+        signature: r#"
     const std::vector<const ExportImportFilesMetaData*>& metadatas,
     ColumnFamilyHandle** handle) {
 "#,
-        insert: r#"
+        body: r#"
   return Status::NotSupported("column family import is not built in");
 "#,
     },
     // Query, block cache, and I/O tracing, and trace replay.
-    Edit::InsertAfter {
+    Edit::ReplaceBody {
         file: "db/db_impl/db_impl.cc",
-        after: r#"
+        signature: r#"
 Status DBImpl::StartTrace(const TraceOptions& trace_options,
                           std::unique_ptr<TraceWriter>&& trace_writer) {
 "#,
-        insert: r#"
+        body: r#"
   return Status::NotSupported("tracing is not built in");
 "#,
     },
-    Edit::InsertAfter {
+    Edit::ReplaceBody {
         file: "db/db_impl/db_impl.cc",
-        after: r#"
+        signature: r#"
 Status DBImpl::StartBlockCacheTrace(
     const TraceOptions& trace_options,
     std::unique_ptr<TraceWriter>&& trace_writer) {
 "#,
-        insert: r#"
+        body: r#"
   return Status::NotSupported("tracing is not built in");
 "#,
     },
-    Edit::InsertAfter {
+    Edit::ReplaceBody {
         file: "db/db_impl/db_impl.cc",
-        after: r#"
+        signature: r#"
 Status DBImpl::StartBlockCacheTrace(
     const BlockCacheTraceOptions& trace_options,
     std::unique_ptr<BlockCacheTraceWriter>&& trace_writer) {
 "#,
-        insert: r#"
+        body: r#"
   return Status::NotSupported("tracing is not built in");
 "#,
     },
-    Edit::InsertAfter {
+    Edit::ReplaceBody {
         file: "db/db_impl/db_impl.cc",
-        after: r#"
+        signature: r#"
 Status DBImpl::StartIOTrace(const TraceOptions& trace_options,
                             std::unique_ptr<TraceWriter>&& trace_writer) {
 "#,
-        insert: r#"
+        body: r#"
   return Status::NotSupported("tracing is not built in");
 "#,
     },
-    Edit::InsertAfter {
+    Edit::ReplaceBody {
         file: "db/db_impl/db_impl.cc",
-        after: r#"
+        signature: r#"
     std::unique_ptr<Replayer>* replayer) {
 "#,
-        insert: r#"
+        body: r#"
   return Status::NotSupported("trace replay is not built in");
 "#,
     },
     // Remote compaction (`CompactionService`, `DB::OpenAndCompact`).
-    Edit::InsertAfter {
+    Edit::ReplaceBody {
         file: "db/db_impl/db_impl_secondary.cc",
-        after: r#"
+        signature: r#"
     std::string* output,
     const CompactionServiceOptionsOverride& override_options) {
 "#,
-        insert: r#"
+        body: r#"
   return Status::NotSupported("remote compaction is not built in");
 "#,
     },
@@ -140,11 +130,16 @@ Status DBImpl::StartIOTrace(const TraceOptions& trace_options,
         find: r#"
   if (db_options_.compaction_service) {
     CompactionServiceJobStatus comp_status =
+        ProcessKeyValueCompactionWithCompactionService(sub_compact);
+    if (comp_status != CompactionServiceJobStatus::kUseLocal) {
+      return;
+    }
+    // fallback to local compaction
+    assert(comp_status == CompactionServiceJobStatus::kUseLocal);
+    sub_compact->compaction_job_stats.is_remote_compaction = false;
+  }
 "#,
-        with: r#"
-  if (false) {
-    CompactionServiceJobStatus comp_status =
-"#,
+        with: "",
     },
     // Encrypted file systems.
     Edit::Replace {
@@ -266,28 +261,13 @@ Status DBImpl::StartIOTrace(const TraceOptions& trace_options,
     // Remote compaction: `DB::OpenAndCompact` returns early above, but the
     // secondary instance's compaction still calls the skipped
     // `CompactionServiceCompactionJob`.
-    Edit::InsertAfter {
+    Edit::ReplaceBody {
         file: "db/db_impl/db_impl_secondary.cc",
-        after: r#"
+        signature: r#"
     const CompactionServiceInput& input, CompactionServiceResult* result) {
 "#,
-        insert: r#"
+        body: r#"
   return Status::NotSupported("remote compaction is not built in");
-#if 0
-"#,
-    },
-    Edit::Replace {
-        file: "db/db_impl/db_impl_secondary.cc",
-        find: r#"
-  result->status = s;
-  return s;
-}
-"#,
-        with: r#"
-  result->status = s;
-  return s;
-#endif
-}
 "#,
     },
 ];
@@ -300,19 +280,82 @@ fn code(text: &'static str) -> &'static str {
 impl Edit {
     fn file(&self) -> &'static str {
         match self {
-            Edit::InsertAfter { file, .. } | Edit::Replace { file, .. } => file,
+            Edit::ReplaceBody { file, .. }
+            | Edit::InsertAfter { file, .. }
+            | Edit::Replace { file, .. } => file,
         }
     }
 
-    /// The anchor this edit matches, and the text that takes its place.
-    fn anchor_and_replacement(&self) -> (&'static str, String) {
+    /// The code this edit matches.
+    fn anchor(&self) -> &'static str {
         match self {
-            Edit::InsertAfter { after, insert, .. } => {
-                (code(after), format!("{}{}", code(after), code(insert)))
-            }
-            Edit::Replace { find, with, .. } => (code(find), code(with).to_owned()),
+            Edit::ReplaceBody { signature, .. } => code(signature),
+            Edit::InsertAfter { after, .. } => code(after),
+            Edit::Replace { find, .. } => code(find),
         }
     }
+
+    /// Applies this edit to `source`, whose only match of the anchor starts at
+    /// `start`.
+    fn apply(&self, source: &str, start: usize) -> String {
+        let end = start + self.anchor().len();
+        match self {
+            Edit::ReplaceBody { body, .. } => {
+                let open = source[..end]
+                    .trim_end()
+                    .strip_suffix('{')
+                    .map(str::len)
+                    .expect("a ReplaceBody signature ends with the body's opening brace");
+                let close = matching_brace(source, open);
+                format!("{}\n{}{}", &source[..=open], code(body), &source[close..])
+            }
+            Edit::InsertAfter { insert, .. } => {
+                format!("{}{}{}", &source[..end], code(insert), &source[end..])
+            }
+            Edit::Replace { with, .. } => {
+                format!("{}{}{}", &source[..start], code(with), &source[end..])
+            }
+        }
+    }
+}
+
+/// Returns the index of the `}` that closes the `{` at `open` in C++ `source`,
+/// skipping braces in comments and string and character literals.
+fn matching_brace(source: &str, open: usize) -> usize {
+    let bytes = source.as_bytes();
+    let mut depth = 0usize;
+    let mut i = open;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'{' => depth += 1,
+            b'}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return i;
+                }
+            }
+            b'/' if bytes.get(i + 1) == Some(&b'/') => {
+                i += source[i..].find('\n').unwrap_or(source.len() - i);
+            }
+            b'/' if bytes.get(i + 1) == Some(&b'*') => {
+                i += source[i..].find("*/").expect("unterminated comment") + 1;
+            }
+            // Raw strings are not supported: none of the edited bodies has one.
+            b'R' if bytes.get(i + 1) == Some(&b'"') => {
+                panic!("zakura_minimal: raw string literal in a replaced body")
+            }
+            // A quote after a digit separates digits, as in `1'000`.
+            quote @ (b'"' | b'\'') if quote == b'"' || !bytes[i - 1].is_ascii_alphanumeric() => {
+                i += 1;
+                while bytes[i] != quote {
+                    i += if bytes[i] == b'\\' { 2 } else { 1 };
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    panic!("zakura_minimal: unbalanced braces after byte {open}")
 }
 
 /// Writes the edited copies under `out_dir` and returns, for each edited
@@ -331,13 +374,14 @@ pub fn write_edited_sources(rocksdb_dir: &Path, out_dir: &Path) -> HashMap<&'sta
             .unwrap_or_else(|e| panic!("unable to read {}: {e}", original.display()))
             .replace("\r\n", "\n");
         for edit in edits {
-            let (anchor, replacement) = edit.anchor_and_replacement();
+            let anchor = edit.anchor();
             let count = source.matches(anchor).count();
             assert_eq!(
                 count, 1,
                 "zakura_minimal: expected exactly one match in {file} for anchor {anchor:?}, found {count}"
             );
-            source = source.replacen(anchor, &replacement, 1);
+            let start = source.find(anchor).expect("the anchor matched once");
+            source = edit.apply(&source, start);
         }
         let path = out_dir.join("zakura_minimal").join(file);
         fs::create_dir_all(path.parent().expect("edited source path has a parent"))
