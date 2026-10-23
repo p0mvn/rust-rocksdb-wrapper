@@ -62,35 +62,35 @@ features = ["lz4"]
 ## Full RocksDB build (feature `full`)
 
 The default feature `full` compiles all of RocksDB. Disabling default features
-also disables `full`, which builds only what Zakura uses: about 15% less C++ to
-compile and about 540 KB less code in the final binary. Without `full`:
+also disables `full`, which builds only what Zakura uses: it skips 58 of
+RocksDB's 329 library sources and leaves about 570 KB less code in the final
+binary. Without `full`, these features return `NotSupported` or fail to open:
+SST file ingestion, column family import, remote compaction
+(`CompactionService`), tracing and trace replay, encrypted file systems, plain
+tables, cuckoo tables created from an options string, and TTL databases.
 
-- These features return `NotSupported` or fail to open: SST file ingestion,
-  column family import, remote compaction (`CompactionService`), tracing and
-  trace replay, encrypted file systems, the plain and cuckoo table formats,
-  and TTL databases.
-- Calling the C API of transactions, backups, checkpoints, or BlobDB fails to
-  link.
-- Linking a binary needs GCC or clang. MSVC's linker resolves every symbol of
-  the C API's object file before dropping unused functions, so it fails on
-  the C API of the skipped features.
+`librocksdb-sys/zakura_minimal.rs` makes the source edits that cut those
+features off, and `librocksdb-sys/zakura_excluded_sources.txt` lists the
+skipped sources. Most of the size saving comes from the edits; the linker
+drops code that nothing reaches whether or not it is compiled.
 
-`librocksdb-sys/zakura_minimal.rs` makes the source edits, and
-`librocksdb-sys/zakura_excluded_sources.txt` lists the skipped sources.
+No compiled code may reference a skipped source, so the archive defines every
+RocksDB symbol it references. Otherwise the link depends on the linker
+dropping the referencing code first: GCC 16 kept such a reference live by
+speculatively devirtualizing a call, and MSVC never drops code early enough.
+`.github/scripts/check_minimal_symbols.py` fails on any undefined RocksDB
+symbol, and `.github/scripts/update_excluded_sources.py` stops skipping the
+sources that define them, repeating until there are none. Run it after a
+RocksDB upgrade or after adding sources to the list, and review the diff.
 
-Only the C API may reference skipped code. The linker keeps a C API function
-only when Rust calls it, but the compiler can keep any other function live,
-for example by speculatively devirtualizing a virtual call, and then the link
-fails on some toolchains and not others. The "Minimal build toolchains"
-workflow links and runs `tests/test_zakura_minimal.rs` with many GCC and
-clang versions and on several machines (on Windows it only builds the
-library), and on Linux
-`.github/scripts/check_minimal_symbols.py` fails if anything other than the
-C API references skipped code:
+The "Minimal build toolchains" workflow links and runs
+`tests/test_zakura_minimal.rs` in release and debug with many GCC and clang
+versions, on Linux, macOS, and Windows, and runs the check on Linux:
 
 ```text
 cargo test --release --no-default-features --features lz4,bindgen-runtime --test test_zakura_minimal
-python3 .github/scripts/check_minimal_symbols.py target/release/build/zakura-librocksdb-sys-*/out/librocksdb.a
+python3 .github/scripts/check_minimal_symbols.py target/*/build/zakura-librocksdb-sys-*/out/librocksdb.a
+python3 .github/scripts/update_excluded_sources.py
 ```
 
 ## Multithreaded ColumnFamily alternation

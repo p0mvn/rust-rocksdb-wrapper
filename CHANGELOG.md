@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Without `full`, no compiled code references a skipped source any more, so
+  the link no longer depends on the linker dropping that code first. Compile
+  24 more sources again (transactions, backups, checkpoints, TTL databases,
+  cuckoo tables, options and memory utilities, the SST file dumper, and the
+  wide-column helpers), which skips 58 of RocksDB's 329 library sources
+  instead of 91. Nothing Zakura uses reaches them, so the linker drops them
+  and binaries are no larger. Their C API functions now link and work
+  instead of failing to link, and binaries link with MSVC.
+- `.github/scripts/check_minimal_symbols.py` now fails on any undefined
+  RocksDB symbol, in release and debug builds, and the new
+  `.github/scripts/update_excluded_sources.py` keeps the skipped-source list
+  in that state. The Windows CI job links and runs the minimal test again.
+- The source edits replace the whole body of each disabled entry point with
+  its early return, and delete the remote compaction branch of
+  `CompactionJob::ProcessKeyValueCompaction`. Unoptimized builds compiled the
+  code after the returns, which referenced skipped sources: MSVC debug builds
+  failed to link, and clang debug archives had undefined symbols.
 - Exclude `snappy/third_party/` (Google benchmark and googletest) from the
   `zakura-librocksdb-sys` package. They are never compiled, but a recursive
   submodule checkout packaged them into 0.17.6, adding 420 files.
