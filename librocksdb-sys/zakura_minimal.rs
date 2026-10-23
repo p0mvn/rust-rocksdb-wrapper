@@ -3,7 +3,9 @@
 //! Without the `full` feature, each listed RocksDB source file is copied into
 //! `OUT_DIR`, edited, and compiled in place of the original. Every edit makes
 //! an entry point of an unused feature return early, so the compiler drops the
-//! call into that feature and the linker drops the feature's code. The
+//! call into that feature and the linker drops the feature's code. Where the
+//! rest of an entry point calls into a skipped source, `#if 0` removes it, since
+//! an unoptimized build still compiles code after an early return. The
 //! `rocksdb` submodule itself stays unmodified.
 //!
 //! The C++ in each edit is written exactly as it appears in RocksDB. Each
@@ -40,6 +42,23 @@ Status DBImpl::IngestExternalFiles(
 "#,
         insert: r#"
   return Status::NotSupported("SST file ingestion is not built in");
+#if 0
+"#,
+    },
+    Edit::Replace {
+        file: "db/db_impl/db_impl.cc",
+        find: r#"
+  return status;
+}
+
+Status DBImpl::CreateColumnFamilyWithImport(
+"#,
+        with: r#"
+  return status;
+#endif
+}
+
+Status DBImpl::CreateColumnFamilyWithImport(
 "#,
     },
     // Column family import (`DB::CreateColumnFamilyWithImport`).
@@ -254,6 +273,21 @@ Status DBImpl::StartIOTrace(const TraceOptions& trace_options,
 "#,
         insert: r#"
   return Status::NotSupported("remote compaction is not built in");
+#if 0
+"#,
+    },
+    Edit::Replace {
+        file: "db/db_impl/db_impl_secondary.cc",
+        find: r#"
+  result->status = s;
+  return s;
+}
+"#,
+        with: r#"
+  result->status = s;
+  return s;
+#endif
+}
 "#,
     },
 ];

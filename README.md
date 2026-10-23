@@ -89,7 +89,7 @@ versions, on Linux, macOS, and Windows, and runs the check on Linux:
 
 ```text
 cargo test --release --no-default-features --features lz4,bindgen-runtime --test test_zakura_minimal
-python3 .github/scripts/check_minimal_symbols.py target/release/build/zakura-librocksdb-sys-*/out/librocksdb.a
+python3 .github/scripts/check_minimal_symbols.py target/*/build/zakura-librocksdb-sys-*/out/librocksdb.a
 python3 .github/scripts/update_excluded_sources.py
 ```
 

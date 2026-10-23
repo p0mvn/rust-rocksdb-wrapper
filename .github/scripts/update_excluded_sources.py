@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Stops skipping the sources that compiled code still references.
 
-Builds `zakura-librocksdb-sys` without `full`, finds the RocksDB symbols the
+Builds `zakura-librocksdb-sys` without `full`, in release and debug, finds the RocksDB symbols the
 archive references but does not define (see `check_minimal_symbols.py`), and
 removes from `librocksdb-sys/zakura_excluded_sources.txt` each skipped source
 that defines one. It repeats until no symbol is undefined, since a source it
@@ -29,9 +29,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 SYS_DIR = os.path.join(ROOT, "librocksdb-sys")
 EXCLUDED = os.path.join(SYS_DIR, "zakura_excluded_sources.txt")
 BUILD = [
-    "cargo", "build", "--release", "-p", "zakura-librocksdb-sys",
+    "cargo", "build", "-p", "zakura-librocksdb-sys",
     "--no-default-features", "--features", "lz4,bindgen-runtime",
 ]
+# Unoptimized builds emit inline functions that optimized builds drop, so they
+# can reference more symbols.
+PROFILES = {"release": ["--release"], "debug": []}
 
 
 def excluded_sources():
@@ -39,13 +42,18 @@ def excluded_sources():
         return [l.strip() for l in f if l.strip() and not l.startswith("#")]
 
 
-def build_archive():
+def build_archive(profile):
     """Builds the minimal library and returns the path of its archive."""
-    subprocess.run(BUILD, cwd=ROOT, check=True)
+    subprocess.run(BUILD + PROFILES[profile], cwd=ROOT, check=True)
     archives = glob.glob(
-        os.path.join(ROOT, "target/release/build/zakura-librocksdb-sys-*/out/librocksdb.a")
+        os.path.join(ROOT, f"target/{profile}/build/zakura-librocksdb-sys-*/out/librocksdb.a")
     )
     return max(archives, key=os.path.getmtime)
+
+
+def undefined_symbols():
+    """Returns the RocksDB symbols a release or debug archive leaves undefined."""
+    return sorted({s for p in PROFILES for s in undefined_rocksdb_symbols(build_archive(p))})
 
 
 def definition_patterns(symbol):
@@ -91,7 +99,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     for round_ in range(1, args.max_rounds + 1):
-        undefined = undefined_rocksdb_symbols(build_archive())
+        undefined = undefined_symbols()
         print(f"round {round_}: {len(undefined)} undefined RocksDB symbols")
         if not undefined:
             return 0

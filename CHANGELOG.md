@@ -14,6 +14,10 @@
   RocksDB symbol, in release and debug builds, and the new
   `.github/scripts/update_excluded_sources.py` keeps the skipped-source list
   in that state. The Windows CI job links and runs the minimal test again.
+- `#if 0` removes the code after the early returns in
+  `DBImpl::IngestExternalFiles` and `DBImplSecondary::CompactWithoutInstallation`:
+  unoptimized builds still compiled it, and it referenced the skipped SST
+  ingestion and remote compaction sources.
 - Exclude `snappy/third_party/` (Google benchmark and googletest) from the
   `zakura-librocksdb-sys` package. They are never compiled, but a recursive
   submodule checkout packaged them into 0.17.6, adding 420 files.
