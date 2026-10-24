@@ -29,26 +29,6 @@ fn fail_on_empty_directory(name: &str) {
     }
 }
 
-fn rocksdb_include_dir() -> String {
-    env::var("ROCKSDB_INCLUDE_DIR").unwrap_or_else(|_| "rocksdb/include".to_string())
-}
-
-fn bindgen_rocksdb() {
-    let bindings = bindgen::Builder::default()
-        .header(rocksdb_include_dir() + "/rocksdb/c.h")
-        .derive_debug(false)
-        .blocklist_type("max_align_t") // https://github.com/rust-lang-nursery/rust-bindgen/issues/550
-        .ctypes_prefix("libc")
-        .size_t_is_usize(true)
-        .generate()
-        .expect("unable to generate rocksdb bindings");
-
-    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
-        .expect("unable to write rocksdb bindings");
-}
-
 fn build_rocksdb() {
     let target = env::var("TARGET").unwrap();
 
@@ -479,7 +459,6 @@ fn main() {
     if !Path::new("rocksdb/AUTHORS").exists() {
         update_submodules();
     }
-    bindgen_rocksdb();
     let target = env::var("TARGET").unwrap();
 
     if !try_to_find_and_link_lib("ROCKSDB") {

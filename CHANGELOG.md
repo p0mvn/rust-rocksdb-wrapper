@@ -1,7 +1,16 @@
 # Changelog
 
-## Unreleased
+## zakura-rocksdb 0.24.4 / zakura-librocksdb-sys 0.17.7+10.4.2 (unreleased)
 
+- Commit the Rust bindings to RocksDB's C API in
+  `librocksdb-sys/src/bindings.rs` instead of generating them with bindgen in
+  the build script. Building no longer needs libclang, and `bindgen`,
+  `clang-sys`, `libloading`, `glob`, `cexpr`, `nom`, `minimal-lexical`,
+  `itertools`, `shlex`, `regex`, `regex-automata`, and `regex-syntax` leave
+  the build. `tools/generate-bindings` regenerates the file, and CI checks
+  that it is up to date. The bindings declare the same 942 functions as
+  before. The `bindgen-runtime` and `bindgen-static` features are kept as
+  no-ops, and `ROCKSDB_INCLUDE_DIR` no longer has any effect.
 - Without `full`, no compiled code references a skipped source any more, so
   the link no longer depends on the linker dropping that code first. Compile
   24 more sources again (transactions, backups, checkpoints, TTL databases,

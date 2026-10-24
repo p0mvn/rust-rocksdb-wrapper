@@ -1,0 +1,13 @@
+[package]
+name = "generate-bindings"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Regenerates librocksdb-sys/src/bindings.rs from RocksDB's C API header"
+
+# A standalone package, so `bindgen` stays out of the published crates'
+# dependency graph and out of every build that depends on them.
+[workspace]
+
+[dependencies]
+bindgen = { version = "=0.72.1", default-features = false, features = ["runtime", "prettyplease"] }

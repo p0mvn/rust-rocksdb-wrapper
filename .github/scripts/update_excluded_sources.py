@@ -30,7 +30,7 @@ SYS_DIR = os.path.join(ROOT, "librocksdb-sys")
 EXCLUDED = os.path.join(SYS_DIR, "zakura_excluded_sources.txt")
 BUILD = [
     "cargo", "build", "-p", "zakura-librocksdb-sys",
-    "--no-default-features", "--features", "lz4,bindgen-runtime",
+    "--no-default-features", "--features", "lz4",
 ]
 # Unoptimized builds emit inline functions that optimized builds drop, so they
 # can reference more symbols.

@@ -1,6 +1,6 @@
 [package]
 name = "zakura-librocksdb-sys"
-version = "0.17.6+10.4.2"
+version = "0.17.7+10.4.2"
 edition = "2021"
 rust-version = "1.97"
 authors = [
@@ -25,11 +25,13 @@ exclude = ["rocksdb/docs/", "snappy/third_party/"]
 name = "librocksdb_sys"
 
 [features]
-default = ["static", "bindgen/runtime", "full"]
+default = ["static", "full"]
 jemalloc = ["tikv-jemalloc-sys"]
 static = ["libz-sys?/static", "bzip2-sys?/static"]
-bindgen-runtime = ["bindgen/runtime"]
-bindgen-static = ["bindgen/static"]
+# The bindings are committed in `src/bindings.rs`, so the build no longer runs
+# bindgen. These features are kept so existing dependents still build.
+bindgen-runtime = []
+bindgen-static = []
 mt_static = []
 full = []
 io-uring = ["pkg-config"]
@@ -59,5 +61,4 @@ uuid = { version = "1.0", features = ["v4"] }
 
 [build-dependencies]
 cc = { version = "1.0", features = ["parallel"] }
-bindgen = { version = "0.72", default-features = false }
 pkg-config = { version = "0.3", optional = true }
