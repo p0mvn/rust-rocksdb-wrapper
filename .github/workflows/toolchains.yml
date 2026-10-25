@@ -94,9 +94,9 @@ jobs:
             | sh -s -- -y --profile minimal --default-toolchain "$RUST_VERSION"
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - name: Link and run, release
-        run: cargo test --release $MINIMAL_FEATURES --test test_zakura_minimal
+        run: cargo test --locked --release $MINIMAL_FEATURES --test test_zakura_minimal
       - name: Link and run, debug
-        run: cargo test $MINIMAL_FEATURES --test test_zakura_minimal
+        run: cargo test --locked $MINIMAL_FEATURES --test test_zakura_minimal
       - name: Check references to skipped code
         run: python3 .github/scripts/check_minimal_symbols.py target/*/build/zakura-librocksdb-sys-*/out/librocksdb.a
 
@@ -132,10 +132,10 @@ jobs:
           echo "CXX=${{ matrix.cxx }}" >> "$GITHUB_ENV"
       - name: Link and run, release
         shell: bash
-        run: cargo test --release $MINIMAL_FEATURES --test test_zakura_minimal
+        run: cargo test --locked --release $MINIMAL_FEATURES --test test_zakura_minimal
       - name: Link and run, debug
         shell: bash
-        run: cargo test $MINIMAL_FEATURES --test test_zakura_minimal
+        run: cargo test --locked $MINIMAL_FEATURES --test test_zakura_minimal
       - name: Check references to skipped code
         if: runner.os == 'Linux'
         run: python3 .github/scripts/check_minimal_symbols.py target/*/build/zakura-librocksdb-sys-*/out/librocksdb.a

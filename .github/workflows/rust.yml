@@ -35,7 +35,7 @@ jobs:
         with:
           cache-on-failure: true
       - name: Run cargo rustdoc
-        run: cargo rustdoc -- -D warnings
+        run: cargo rustdoc --locked -- -D warnings
   doctest: # doctest are no supported in cargo nextest yet. https://github.com/nextest-rs/nextest/issues/16
     name: Doctests
     runs-on: ubuntu-latest
@@ -50,7 +50,7 @@ jobs:
         with:
           cache-on-failure: true
       - name: Run doctests
-        run: cargo test --doc
+        run: cargo test --locked --doc
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
@@ -71,7 +71,7 @@ jobs:
         run: echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
       - name: Run clippy
         run: |
-          cargo clippy --all-targets --features \
+          cargo clippy --locked --all-targets --features \
             "jemalloc \
             io-uring \
             valgrind \
@@ -150,10 +150,10 @@ jobs:
           chmod -R a+w target Cargo.lock
       - name: Run rocksdb tests
         run: |
-          cargo nextest run --all
-          cargo nextest run --all --features multi-threaded-cf
+          cargo nextest run --locked --all
+          cargo nextest run --locked --all --features multi-threaded-cf
       - name: Build without the `full` feature, as Zakura does
-        run: cargo build -p zakura-rocksdb --no-default-features --features lz4
+        run: cargo build --locked -p zakura-rocksdb --no-default-features --features lz4
       - name: Mark working directory as writable
         if: runner.os == 'Linux'
         run: chmod -R a+w .
@@ -168,7 +168,7 @@ jobs:
           chmod -R a+w target Cargo.lock
       - name: Run rocksdb tests (jemalloc)
         if: runner.os != 'Windows'
-        run: cargo nextest run --all --features jemalloc
+        run: cargo nextest run --locked --all --features jemalloc
       - name: Mark working directory as writable
         if: runner.os == 'Linux'
         run: chmod -R a+w .
