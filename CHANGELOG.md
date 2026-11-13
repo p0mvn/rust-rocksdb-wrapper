@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add `Options::set_ttl`, the leveled-compaction file age limit (30 days by
+  default with block based tables). Setting it to 0 stops RocksDB from
+  compacting files into the next level only because they are old.
+
 ## zakura-rocksdb 0.24.4 / zakura-librocksdb-sys 0.17.7+10.4.2 (unreleased)
 
 - Commit the Rust bindings to RocksDB's C API in

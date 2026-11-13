@@ -313,6 +313,45 @@ fn test_set_periodic_compaction_seconds() {
     }
 }
 
+/// The `ttl` value RocksDB recorded for the default column family in the
+/// options file it writes when a database is opened.
+fn recorded_ttl(path: &DBPath) -> String {
+    let options_file = fs::read_dir(path)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .find(|file| {
+            file.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with("OPTIONS-"))
+        })
+        .expect("opening a database writes an options file");
+    fs::read_to_string(options_file)
+        .unwrap()
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("ttl=").map(str::to_owned))
+        .expect("the options file records ttl for each column family")
+}
+
+#[test]
+fn test_set_ttl() {
+    let thirty_days = (30 * 24 * 60 * 60).to_string();
+    {
+        let path = DBPath::new("_set_ttl_default");
+        let mut opts = Options::default();
+        opts.create_if_missing(true);
+        let _db = DB::open(&opts, &path).unwrap();
+        assert_eq!(recorded_ttl(&path), thirty_days);
+    }
+    {
+        let path = DBPath::new("_set_ttl_disabled");
+        let mut opts = Options::default();
+        opts.create_if_missing(true);
+        opts.set_ttl(0);
+        let _db = DB::open(&opts, &path).unwrap();
+        assert_eq!(recorded_ttl(&path), "0");
+    }
+}
+
 #[test]
 fn test_set_ratelimiter() {
     let path = DBPath::new("_set_ratelimiter");

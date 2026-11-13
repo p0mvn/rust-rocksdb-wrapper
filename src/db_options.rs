@@ -1575,6 +1575,35 @@ impl Options {
         }
     }
 
+    /// With leveled compaction, RocksDB compacts a file into the next level once
+    /// the oldest data in it is older than this many seconds, however little has
+    /// been written since. Files in the last level are left alone.
+    ///
+    /// The purpose is to get deletions and overwritten values out of the upper
+    /// levels within a bounded time. A column family that only ever gains keys
+    /// has nothing to reclaim, and when its keys are spread evenly, such as
+    /// hashes, each of these compactions rewrites most of the last level to merge
+    /// in the little that arrived since the previous one.
+    ///
+    /// This option only supports block based table format.
+    ///
+    /// unit: seconds. Ex: 7 days = 7 * 24 * 60 * 60
+    ///
+    /// Values:
+    /// 0: Turn off compaction by file age.
+    /// UINT64_MAX - 1 (0xfffffffffffffffe) is special flag to allow RocksDB to
+    /// pick default.
+    ///
+    /// Default: 30 days if using block based table format, 0 (disabled)
+    /// otherwise.
+    ///
+    /// Dynamically changeable through SetOptions() API.
+    pub fn set_ttl(&mut self, secs: u64) {
+        unsafe {
+            ffi::rocksdb_options_set_ttl(self.inner, secs);
+        }
+    }
+
     pub fn set_merge_operator_associative<F: MergeFn + Clone>(
         &mut self,
         name: impl CStrLike,
