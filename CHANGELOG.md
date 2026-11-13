@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## zakura-rocksdb 0.25.0 (2026-11-12)
 
 - Add `Options::set_ttl`, the leveled-compaction file age limit (30 days by
   default with block based tables). Setting it to 0 stops RocksDB from
